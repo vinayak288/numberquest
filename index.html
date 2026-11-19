@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NumberQuest — A fast, browser-based number guessing game with difficulty levels, live range tracker, and saved best scores." />
+  <title>NumberQuest — Guess the Number</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-top: #eef2ff;
+      --bg-bottom: #f8fafc;
+      --surface: #ffffff;
+      --surface-muted: #f1f5f9;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --border: #e2e8f0;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-soft: #eef2ff;
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(150deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .topbar-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-muted);
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .nav-btn:hover {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+
+    .nav-btn.sound-on {
+      color: var(--primary-hover);
+      background: var(--primary-soft);
+      border-color: #c7d2fe;
+    }
+
+    .page-wrap {
+      flex: 1;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+      display: grid;
+      grid-template-columns: 1.35fr 0.9fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 760px) {
+      .page-wrap {
+        grid-template-columns: 1fr;
+        padding: 18px 14px 32px;
+      }
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      padding: 26px 24px;
+    }
+
+    .game-header {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary-hover);
+      background: #e0e7ff;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .difficulty-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .diff-btn {
+      flex: 1;
+      padding: 9px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-muted);
+      background: var(--surface-muted);
+      border: 2px solid transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .diff-btn:hover {
+      background: #e2e8f0;
+    }
+
+    .diff-btn.active {
+      color: var(--primary-hover);
+      background: var(--primary-soft);
+      border-color: var(--primary);
+    }
+
+    .round-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .stat-pill {
+      background: var(--surface-muted);
+      border-radius: 10px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+
+    .stat-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .range-box {
+      margin-bottom: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .range-track {
+      position: relative;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .range-fill {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0%;
+      width: 100%;
+      background: linear-gradient(90deg, #4f46e5, #818cf8);
+      border-radius: 999px;
+      transition: left 0.25s ease, width 0.25s ease;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    input[type="number"] {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      font-size: 16px;
+      font-family: inherit;
+      border: 2px solid #cbd5e1;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+
+    input[type="number"]:disabled {
+      background: #f8fafc;
+      color: #94a3b8;
+    }
+
+    .primary-btn {
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #ffffff;
+      background: var(--primary);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .primary-btn:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .primary-btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .primary-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .feedback {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      background: var(--surface-muted);
+      color: var(--text-muted);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .feedback.hint {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .feedback.win {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .feedback.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .history-section {
+      margin-top: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .history-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .history-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      list-style: none;
+    }
+
+    .history-item {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .history-item.win {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .reset-btn {
+      width: 100%;
+      margin-top: 16px;
+      background: #0f172a;
+    }
+
+    .reset-btn:hover:not(:disabled) {
+      background: #1e293b;
+    }
+
+    .side-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .side-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .score-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--surface-muted);
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .score-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .score-value {
+      font-weight: 700;
+      color: var(--primary-hover);
+    }
+
+    .secondary-btn {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-muted);
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .secondary-btn:hover {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .publish-note {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+
+    .modal {
+      background: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+    }
+
+    .modal h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .modal ul {
+      padding-left: 18px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-icon">#</span>
+        <span>NumberQuest</span>
+      </div>
+      <div class="nav-actions">
+        <button id="soundToggleBtn" class="nav-btn sound-on" type="button" aria-pressed="true">
+          Sound: On
+        </button>
+        <button id="howToPlayBtn" class="nav-btn" type="button">How to Play</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-wrap">
+    <section class="card" aria-label="Game board">
+      <div class="game-header">
+        <span class="badge">Ready for Chrome</span>
+        <h1>Guess the Number</h1>
+        <p class="subtitle">
+          I'm thinking of a number between <strong>1</strong> and <strong id="maxDisplay">100</strong>.
+        </p>
+      </div>
+
+      <div class="difficulty-row" role="group" aria-label="Difficulty level">
+        <button class="diff-btn" type="button" data-max="50">Easy (1–50)</button>
+        <button class="diff-btn active" type="button" data-max="100">Normal (1–100)</button>
+        <button class="diff-btn" type="button" data-max="500">Hard (1–500)</button>
+      </div>
+
+      <div class="round-stats">
+        <div class="stat-pill">
+          <span class="stat-label">Attempts</span>
+          <span class="stat-val" id="attemptsDisplay">0</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Best</span>
+          <span class="stat-val" id="currentBestDisplay">—</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Streak</span>
+          <span class="stat-val" id="streakDisplay">0</span>
+        </div>
+      </div>
+
+      <div class="range-box" aria-label="Possible number range">
+        <div class="range-labels">
+          <span id="rangeLowLabel">Possible: 1</span>
+          <span id="rangeHighLabel">to 100</span>
+        </div>
+        <div class="range-track">
+          <div id="rangeFill" class="range-fill"></div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <input
+          id="guessInput"
+          type="number"
+          min="1"
+          max="100"
+          placeholder="Enter 1–100"
+          aria-label="Your guess"
+        />
+        <button id="guessBtn" class="primary-btn" type="button">Guess</button>
+      </div>
+
+      <p id="feedback" class="feedback" role="status" aria-live="polite">
+        Type a number and hit Guess!
+      </p>
+
+      <div id="historySection" class="history-section hidden">
+        <p class="history-label">Your Guesses</p>
+        <ul id="historyList" class="history-list"></ul>
+      </div>
+
+      <button id="resetBtn" class="primary-btn reset-btn hidden" type="button">Play Again</button>
+    </section>
+
+    <aside class="card" aria-label="Scoreboard and stats">
+      <h2 class="side-title">Your Scoreboard</h2>
+      <p class="side-sub">Best scores are saved automatically in your browser.</p>
+
+      <div class="score-list">
+        <div class="score-row">
+          <span class="score-name">Easy (1–50)</span>
+          <span class="score-value" id="best50">—</span>
+        </div>
+        <div class="score-row">
+          <span class="score-name">Normal (1–100)</span>
+          <span class="score-value" id="best100">—</span>
+        </div>
+        <div class="score-row">
+          <span class="score-name">Hard (1–500)</span>
+          <span class="score-value" id="best500">—</span>
+        </div>
+        <div class="score-row">
+          <span class="score-name">Total Games Won</span>
+          <span class="score-value" id="totalWinsDisplay">0</span>
+        </div>
+      </div>
+
+      <button id="clearStatsBtn" class="secondary-btn" type="button">Reset Saved Stats</button>
+
+      <div class="publish-note">
+        <strong>Publish tip:</strong> Rename this file to <code>index.html</code> and upload it to GitHub Pages, Netlify, or Vercel to share it live in Chrome.
+      </div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    NumberQuest · Self-contained HTML5 web game
+  </footer>
+
+  <div id="howToPlayModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <h2 id="modalTitle">How to Play NumberQuest</h2>
+      <ul>
+        <li>Pick a difficulty: <strong>Easy (1–50)</strong>, <strong>Normal (1–100)</strong>, or <strong>Hard (1–500)</strong>.</li>
+        <li>Type a number and press <strong>Enter</strong> or click <strong>Guess</strong>.</li>
+        <li>Watch the <strong>Possible Range</strong> bar shrink as you rule out numbers that are too high or too low.</li>
+        <li>Try to beat your personal best in the fewest attempts!</li>
+      </ul>
+      <button id="closeModalBtn" class="primary-btn" style="width: 100%;" type="button">Got it</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "numberquest_stats_v1";
+
+    let maxNumber = 100;
+    let secretNumber = Math.floor(Math.random() * maxNumber) + 1;
+    let attempts = 0;
+    let lowBound = 1;
+    let highBound = maxNumber;
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    let stats = {
+      best: { 50: null, 100: null, 500: null },
+      wins: 0,
+      streak: 0
+    };
+
+    const maxDisplay = document.getElementById("maxDisplay");
+    const diffButtons = document.querySelectorAll(".diff-btn");
+    const guessInput = document.getElementById("guessInput");
+    const guessBtn = document.getElementById("guessBtn");
+    const feedback = document.getElementById("feedback");
+    const attemptsDisplay = document.getElementById("attemptsDisplay");
+    const currentBestDisplay = document.getElementById("currentBestDisplay");
+    const streakDisplay = document.getElementById("streakDisplay");
+    const rangeLowLabel = document.getElementById("rangeLowLabel");
+    const rangeHighLabel = document.getElementById("rangeHighLabel");
+    const rangeFill = document.getElementById("rangeFill");
+    const historySection = document.getElementById("historySection");
+    const historyList = document.getElementById("historyList");
+    const resetBtn = document.getElementById("resetBtn");
+    const best50 = document.getElementById("best50");
+    const best100 = document.getElementById("best100");
+    const best500 = document.getElementById("best500");
+    const totalWinsDisplay = document.getElementById("totalWinsDisplay");
+    const clearStatsBtn = document.getElementById("clearStatsBtn");
+    const soundToggleBtn = document.getElementById("soundToggleBtn");
+    const howToPlayBtn = document.getElementById("howToPlayBtn");
+    const howToPlayModal = document.getElementById("howToPlayModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+
+    function loadStats() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.best) {
+            stats = {
+              best: {
+                50: parsed.best[50] ?? null,
+                100: parsed.best[100] ?? null,
+                500: parsed.best[500] ?? null
+              },
+              wins: Number(parsed.wins) || 0,
+              streak: Number(parsed.streak) || 0
+            };
+          }
+        }
+      } catch (e) {
+        // Ignore storage errors in restricted environments
+      }
+    }
+
+    function saveStats() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+      } catch (e) {
+        // Ignore storage errors in restricted environments
+      }
+    }
+
+    function renderStats() {
+      const currentBest = stats.best[maxNumber];
+      currentBestDisplay.textContent = currentBest !== null ? currentBest : "—";
+      streakDisplay.textContent = stats.streak;
+      best50.textContent = stats.best[50] !== null ? stats.best[50] + " tries" : "—";
+      best100.textContent = stats.best[100] !== null ? stats.best[100] + " tries" : "—";
+      best500.textContent = stats.best[500] !== null ? stats.best[500] + " tries" : "—";
+      totalWinsDisplay.textContent = stats.wins;
+    }
+
+    function updateRangeBar() {
+      rangeLowLabel.textContent = "Possible: " + lowBound;
+      rangeHighLabel.textContent = "to " + highBound;
+      const leftPct = ((lowBound - 1) / maxNumber) * 100;
+      const widthPct = Math.max(2, ((highBound - lowBound + 1) / maxNumber) * 100);
+      rangeFill.style.left = leftPct + "%";
+      rangeFill.style.width = widthPct + "%";
+    }
+
+    function playTone(type) {
+      if (!soundEnabled) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!audioCtx) {
+          audioCtx = new AudioContextClass();
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === "win") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.08);
+          osc.frequency.setValueAtTime(783.99, now + 0.16);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+          osc.start(now);
+          osc.stop(now + 0.36);
+        } else if (type === "error") {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(190, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(type === "low" ? 330 : 440, now);
+          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        }
+      } catch (e) {
+        // Audio unavailable
+      }
+    }
+
+    function addHistoryItem(guess, label, isWin) {
+      historySection.classList.remove("hidden");
+      const li = document.createElement("li");
+      li.className = isWin ? "history-item win" : "history-item";
+      li.textContent = guess + " (" + label + ")";
+      historyList.appendChild(li);
+    }
+
+    function checkGuess() {
+      const guess = Number(guessInput.value);
+
+      if (!guessInput.value || Number.isNaN(guess) || guess < 1 || guess > maxNumber) {
+        feedback.textContent = "Please enter a number between 1 and " + maxNumber + ".";
+        feedback.className = "feedback error";
+        playTone("error");
+        return;
+      }
+
+      attempts += 1;
+      attemptsDisplay.textContent = attempts;
+
+      if (guess < secretNumber) {
+        lowBound = Math.max(lowBound, guess + 1);
+        updateRangeBar();
+        feedback.textContent = "Too low! Try a higher number.";
+        feedback.className = "feedback hint";
+        addHistoryItem(guess, "Too low", false);
+        playTone("low");
+        guessInput.select();
+      } else if (guess > secretNumber) {
+        highBound = Math.min(highBound, guess - 1);
+        updateRangeBar();
+        feedback.textContent = "Too high! Try a lower number.";
+        feedback.className = "feedback hint";
+        addHistoryItem(guess, "Too high", false);
+        playTone("high");
+        guessInput.select();
+      } else {
+        lowBound = secretNumber;
+        highBound = secretNumber;
+        updateRangeBar();
+        feedback.textContent =
+          "You got it in " + attempts + (attempts === 1 ? " try" : " tries") +
+          "! The number was " + secretNumber + ".";
+        feedback.className = "feedback win";
+        addHistoryItem(guess, "Correct!", true);
+        playTone("win");
+
+        stats.wins += 1;
+        stats.streak += 1;
+        if (stats.best[maxNumber] === null || attempts < stats.best[maxNumber]) {
+          stats.best[maxNumber] = attempts;
+        }
+        saveStats();
+        renderStats();
+
+        guessInput.disabled = true;
+        guessBtn.disabled = true;
+        resetBtn.classList.remove("hidden");
+      }
+    }
+
+    function resetGame() {
+      secretNumber = Math.floor(Math.random() * maxNumber) + 1;
+      attempts = 0;
+      lowBound = 1;
+      highBound = maxNumber;
+      attemptsDisplay.textContent = "0";
+      maxDisplay.textContent = maxNumber;
+      guessInput.max = maxNumber;
+      guessInput.placeholder = "Enter 1–" + maxNumber;
+      feedback.textContent = "Type a number and hit Guess!";
+      feedback.className = "feedback";
+      guessInput.value = "";
+      guessInput.disabled = false;
+      guessBtn.disabled = false;
+      historyList.innerHTML = "";
+      historySection.classList.add("hidden");
+      resetBtn.classList.add("hidden");
+      updateRangeBar();
+      renderStats();
+      guessInput.focus();
+    }
+
+    diffButtons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        diffButtons.forEach(function (b) {
+          b.classList.remove("active");
+        });
+        btn.classList.add("active");
+        maxNumber = Number(btn.dataset.max);
+        resetGame();
+      });
+    });
+
+    guessBtn.addEventListener("click", checkGuess);
+    resetBtn.addEventListener("click", resetGame);
+    guessInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && !guessBtn.disabled) {
+        checkGuess();
+      }
+    });
+
+    soundToggleBtn.addEventListener("click", function () {
+      soundEnabled = !soundEnabled;
+      soundToggleBtn.textContent = soundEnabled ? "Sound: On" : "Sound: Off";
+      soundToggleBtn.setAttribute("aria-pressed", String(soundEnabled));
+      soundToggleBtn.classList.toggle("sound-on", soundEnabled);
+    });
+
+    clearStatsBtn.addEventListener("click", function () {
+      stats = { best: { 50: null, 100: null, 500: null }, wins: 0, streak: 0 };
+      saveStats();
+      renderStats();
+    });
+
+    howToPlayBtn.addEventListener("click", function () {
+      howToPlayModal.classList.remove("hidden");
+    });
+
+    closeModalBtn.addEventListener("click", function () {
+      howToPlayModal.classList.add("hidden");
+    });
+
+    howToPlayModal.addEventListener("click", function (event) {
+      if (event.target === howToPlayModal) {
+        howToPlayModal.classList.add("hidden");
+      }
+    });
+
+    loadStats();
+    updateRangeBar();
+    renderStats();
+  </script>
+</body>
+</html>
